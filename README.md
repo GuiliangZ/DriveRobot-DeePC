@@ -332,14 +332,10 @@ effort_score = control_effort * 0.001 * 0.2  # 20% on effort
 5. Push branch: `git push origin feature-name`
 6. Submit pull request with description
 
-## License
-
-[Specify your license here]
-
 ## Authors
 
 - Enhanced PID Controller: Guiliang Zheng
-- DeePC Implementation: Drive Robot Team
+- DeePC Implementation: Guiliang Zheng
 - Online Autotuning: Guiliang Zheng
 
 ## References
