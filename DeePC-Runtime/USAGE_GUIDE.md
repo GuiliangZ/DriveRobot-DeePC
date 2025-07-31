@@ -173,9 +173,9 @@ Modify speed operating points in `PRBSDataCollector.py`:
 
 ```python
 self.speed_operating_points = [
-    5, 10, 15, 20, 25, 30, 35, 40, 45, 50,
-    55, 60, 65, 70, 75, 80, 85, 90, 95, 100,
-    105, 110, 115, 120  # Extended range
+    10, 20, 30, 40, 50,
+    60, 70, 80, 90, 100,
+    110, 120  # Extended range
 ]
 ```
 
@@ -310,7 +310,7 @@ tracking_rmse = np.sqrt(np.mean(df['error']**2))
 - [ ] Phase 1: Collect PRBS data (`python PRBSDataCollector.py`)
 - [ ] Phase 2: Generate matrices (`python HankelMatrixAnalyzer.py`)
 - [ ] Phase 3: Run validation (`python ValidationFramework.py`)
-- [ ] Phase 4: Deploy controller (`python PIDDeePCControllerFixed.py`)
+- [ ] Phase 4: Deploy controller (`python Enhanced-Controller.py`)
 - [ ] Monitor performance and tune as needed
 
 For optimal WLTP tracking, ensure all phases complete successfully before production deployment!

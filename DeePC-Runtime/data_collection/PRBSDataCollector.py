@@ -496,14 +496,14 @@ class PRBSDataCollector:
         self.control_frequency = control_frequency
         
         # PRBS parameters
-        self.prbs_amplitude = 15.0  # ±15% PWM amplitude around operating point
+        self.prbs_amplitude = 5.0  # ±15% PWM amplitude around operating point
         self.prbs_length = 1023     # Length of PRBS sequence (2^n - 1)
         self.prbs_duration = 60.0   # seconds per operating point
         
         # Operating points for WLTP cycle (kph)
         self.speed_operating_points = [
-            5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 
-            55, 60, 65, 70, 75, 80, 85, 90, 95, 100
+            10, 20, 30, 40, 50, 
+            60, 70, 80, 90, 100
         ]
         
         # Data storage

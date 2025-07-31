@@ -119,21 +119,7 @@ This will:
 Execute the main control loop with online autotuning:
 
 ```bash
-python run_controller.py
-```
-
-Or run directly from the core directory:
-```bash
-cd core
-python PIDDeePCControllerFixed.py
-```
-
-### 4. Run Enhanced PID Only
-
-For testing the enhanced PID controller without DeePC:
-
-```bash
-python run_enhanced_pid.py
+python Enhanced-Controller.py
 ```
 
 ## Control Architecture
@@ -144,39 +130,14 @@ python run_enhanced_pid.py
 - **Intelligent Interpolation**: Smooth transitions between speed ranges
 - **Fallback Logic**: Automatic switch to enhanced PID if DeePC fails
 
-### 2. Online Parameter Autotuning
-The system continuously optimizes control parameters based on performance:
-
-**Tunable Parameters:**
-- Q: Output tracking weight (50-1000)
-- R: Control effort weight (0.01-1.0)
-- λg: g-vector regularization (10-200)
-- λy: Output mismatch tolerance (5-50)
-- λu: Input mismatch tolerance (5-50)
-
-**Operating Conditions:**
-- Low Speed: 0-30 kph
-- Medium Speed: 30-60 kph
-- High Speed: 60-100 kph
-- Acceleration: >2 kph/s
-- Deceleration: <-2 kph/s
-
-**Tuning Strategy:**
-- Update Interval: 100 cycles (10 seconds at 10Hz)
-- Exploration Rate: 15% (random parameter testing)
-- Adaptation Rate: 5% (parameter change rate)
-- Performance Score: 60% RMSSE + 20% control effort + 10% solve success + 10% smoothness
-
-### 3. Enhanced PID Controller
-Additive enhancement architecture: `Total Control = Baseline PID + Enhancement Signal`
-
+### 2. PID Controller
 **Enhancement Components:**
 - **Adaptive Gain Enhancement**: ±8% gain adjustment based on performance
 - **Data-Driven Feedforward**: Pattern-based feedforward corrections
 - **Error Pattern Learning**: Speed-range specific error corrections
 - **Performance-Based Scaling**: Dynamic enhancement strength (0.3-1.2x)
 
-### 4. Performance Monitoring
+### 3. Performance Monitoring
 
 **Real-time Metrics:**
 - **RMSSE**: Root Mean Square Speed Error (target < 1.2 kph)
@@ -334,12 +295,11 @@ effort_score = control_effort * 0.001 * 0.2  # 20% on effort
 
 ## License
 
-[Specify your license here]
 
 ## Authors
 
 - Enhanced PID Controller: Guiliang Zheng
-- DeePC Implementation: Drive Robot Team
+- DeePC Implementation: Guiliang Zheng
 - Online Autotuning: Guiliang Zheng
 
 ## References
