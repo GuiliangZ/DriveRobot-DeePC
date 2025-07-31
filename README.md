@@ -295,7 +295,6 @@ effort_score = control_effort * 0.001 * 0.2  # 20% on effort
 
 ## License
 
-
 ## Authors
 
 - Enhanced PID Controller: Guiliang Zheng
