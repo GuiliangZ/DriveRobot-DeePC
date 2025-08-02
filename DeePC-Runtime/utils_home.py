@@ -146,7 +146,7 @@ def choose_cycle_key(all_cycles):
                 cycle_keys.append(t)
 
         # Remove duplicates, preserve order
-        cycle_keys = list(dict.fromkeys(cycle_keys))
+        # cycle_keys = list(dict.fromkeys(cycle_keys))
 
         if cycle_keys:
             return cycle_keys
@@ -189,48 +189,8 @@ def get_gains_for_speed(ref_speed: float):
 
     """
     spd = ref_speed
-    # kp_bp_spd = np.array([0,20,40,60,80,100,120,140], dtype=float)
-    # kp_vals = np.array([6,7,8,9,9,10,10,10], dtype=float)
-    # # Add for more aggressive breaking when speed goes to zero
     kp_bp_spd = np.array([0,  3,  4, 20,40,60,80,100,120,140], dtype=float)
     kp_vals = np.array([  6,  13, 6, 7, 8, 9, 9, 10, 10, 10], dtype=float)
-
-    # kp_bp_spd = np.array([0,1, 2, 3,  4, 5, 20,40,60,80,100,120,140], dtype=float)
-    # kp_vals = np.array([ 18,18,18,15, 10,8, 7, 8, 9, 9, 10, 10, 10], dtype=float)
-    kp = float(np.interp(spd, kp_bp_spd, kp_vals))
-
-    ki_bp_spd = np.array([0,20,40,60,80,100,120,140], dtype=float) 
-    ki_vals = np.array([1.5,1.6,1.7,1.9,2,2,2,2], dtype=float)
-    ki = float(np.interp(spd, ki_bp_spd, ki_vals))
-
-    # The baseline code doesn't use kd, - now the kd_vals are wrong and random, adjust when needed
-    kd_bp_spd = np.array([0,20,40,60,80,100,120], dtype=float)
-    kd_vals = np.array([6,7,8,9,10,10,10], dtype=float)
-    kd = float(np.interp(spd, kd_bp_spd, kd_vals))
-    kd = 0
-
-    kff_bp_spd = np.array([0,3,4,60,80,100,120,140], dtype=float)
-    kff_vals = np.array([4,4,3,3,3,3,3,3], dtype=float)
-    kff = float(np.interp(spd, kff_bp_spd, kff_vals))
-
-    return (kp, ki, kd, kff)
-
-def get_gains_for_speed_brake(ref_speed: float):
-    """
-    Return (Kp, Ki, Kd, Kff) according to the current reference speed (kph).
-
-    """
-    spd = ref_speed
-    kp_bp_spd = np.array([0,20,40,60,80,100,120,140], dtype=float)
-    kp_vals = np.array([6,7,8,9,9,10,10,10], dtype=float)
-    # # Add for more aggressive breaking when speed goes to zero
-    # kp_bp_spd = np.array([0,1, 2, 3,  4, 20,40,60,80,100,120,140], dtype=float)
-    # kp_vals = np.array([ 18,18,18,15, 6, 7, 8, 9, 9, 10, 10, 10], dtype=float)
-
-    # kp_bp_spd = np.array([0,1, 2, 3,  4, 5, 20,40,60,80,100,120,140], dtype=float)
-    # kp_vals = np.array([ 18,18,18,15, 10,8, 7, 8, 9, 9, 10, 10, 10], dtype=float)
-    kp_bp_spd = np.array([0,3,20,40,60,80,100,120,140], dtype=float)
-    kp_vals = np.array([6,13,7,8,9,9,10,10,10], dtype=float)
     kp = float(np.interp(spd, kp_bp_spd, kp_vals))
 
     ki_bp_spd = np.array([0,20,40,60,80,100,120,140], dtype=float) 
@@ -515,33 +475,20 @@ def print_dti_results(dti_metrics, cycle_name):
 
 
 
-# ──────────────────────────── Additive Enhancement Controller ──────────────────────────────
+# ──────────────────────────── Enhancement Controller ──────────────────────────────
 class AdditiveEnhancementController:
-    def __init__(self, Ts=0.1, T_f=5000.0, FeedFwdTime=0.65, history_length=50, enable_enhancements=True):
-        """
-        Additive Enhancement Controller - adds enhancement signals on top of unchanged baseline PID.
-        
-        Core Principle: 
-        Total_Control = get_baseline_PID_unchanged() + compute_enhancement_signals()
-        
-        Args:
-            enable_enhancements: If False, controller = exact baseline PID
-        """
+    def __init__(self, Ts=0.01, T_f=5000.0, FeedFwdTime=0.65, history_length=50, enable_enhancements=True):
         self.Ts = Ts
         self.T_f = T_f
         self.FeedFwdTime = FeedFwdTime
         self.enable_enhancements = enable_enhancements
-        
-        # Baseline PID state (for utils_deepc.py compatibility) - NEVER MODIFIED
         self.baseline_I_state = 0.0
         self.baseline_prev_error = 0.0
-        
         # Enhancement data collection
         self.error_history = deque(maxlen=history_length)
         self.speed_history = deque(maxlen=history_length)
         self.speed_derivative_history = deque(maxlen=history_length)
         self.performance_history = deque(maxlen=20)
-        
         # Enhancement parameters (only active if enable_enhancements=True)
         self.adaptive_gain_range = [0.92, 1.08]    # Conservative ±8% range
         self.adaptive_gain_range = [0.9, 1.1]    # Conservative ±8% range
@@ -549,7 +496,6 @@ class AdditiveEnhancementController:
         self.adaptation_rate = 0.006               
         self.feedforward_scaling = 0.6             # Conservative feedforward
         self.performance_scaling_range = [0.3, 1.2] # Enhancement strength scaling
-        
         # Enhancement state
         self.kp_enhancement_mult = 1.0  # Multiplier for additional Kp signal
         self.ki_enhancement_mult = 1.0  # Multiplier for additional Ki signal
@@ -557,66 +503,23 @@ class AdditiveEnhancementController:
         self.ki_enhancement_mult = 1.0  # Multiplier for additional Ki signal
         self.consecutive_good_count = 0
         self.consecutive_poor_count = 0
-        
         # Data-driven components
         self.learned_feedforward_map = {}  # speed_derivative -> feedforward_gain
         self.error_pattern_map = {}        # speed_profile -> error_correction
-        
         # Performance monitoring
         self.recent_errors = deque(maxlen=15)
         self.recent_performance_scores = deque(maxlen=10)
         
-        print("Enhancement Controller initialized:")
-        
     def compute_control(self, error, ref_speed, v_meas, ref_time=None, ref_speed_array=None, elapsed_time=None):
-        """
-        Compute total control = baseline PID (unchanged) + enhancement signals
-        """
-        # ═══ STEP 1: GET BASELINE PID (COMPLETELY UNCHANGED) ═══
         baseline_kp, baseline_ki, baseline_kd, baseline_kff = get_gains_for_speed(ref_speed)
-        #     # ---- look ahead ----
-        # t_future = elapsed_time + self.FeedFwdTime
-        # if   t_future <= ref_time[0]:
-        #     rspd_fut = ref_speed[0]
-        # elif t_future >= ref_time[-1]:
-        #     rspd_fut = 0.0
-        # else:
-        #     rspd_fut = float(np.interp(t_future, ref_time, ref_speed_array))
-        # e_fut = (rspd_fut - v_meas) * 0.621371
-        # # ---- current error in mph ----
-        # e_k_mph = e_k * 0.621371
-        # baseline_P = baseline_kp * e_k_mph
-        # if v_meas > 0.1 and ref_speed > 0.1:
-        #     self.baseline_I_state += baseline_ki * self.Ts * e_k_mph
-        #     baseline_I = self.baseline_I_state
-        # else:
-        #     self.baseline_I_state = 0.0
-        #     baseline_I   = 0.0
-        # baseline_FF = baseline_kff * e_fut
-        # baseline_control   = baseline_P + baseline_I + baseline_FF
-        # self.baseline_prev_error = error
-
-        # implement exact baseline PID logic
         baseline_P = baseline_kp * error
-
         if ref_speed > 0.1 and v_meas > 0.1:
-            # Normal integral calculation with anti-windup
-            self.baseline_I_state = self.baseline_I_state + baseline_ki * Ts * e_k
+            self.baseline_I_state = self.baseline_I_state + baseline_ki * self.Ts * error
             baseline_I = self.baseline_I_state
         else:
             self.baseline_I_state = 0.0  # RESET INTEGRAL STATE
             baseline_I = 0.0
-        
-        # # Baseline integral with standard anti-windup
-        # if abs(error) > 8.0:
-        #     self.baseline_I_state *= 0.7
-        # self.baseline_I_state += error * self.Ts
-        # self.baseline_I_state = np.clip(self.baseline_I_state, -50.0, 50.0)
-        # baseline_I = baseline_ki * self.baseline_I_state
-
-        # No derivative in baseline
         baseline_D = 0.0
-        # Standard baseline feedforward
         baseline_FF = 0.0
         if ref_time is not None and ref_speed_array is not None and elapsed_time is not None:
             try:
@@ -631,39 +534,17 @@ class AdditiveEnhancementController:
                 baseline_FF = 0.0
         baseline_control = baseline_P + baseline_I + baseline_D + baseline_FF
         self.baseline_prev_error = error
-
-
-        # ═══ STEP 2: COMPUTE ENHANCEMENT SIGNALS ═══
         enhancement_signal = 0.0
-        
         if self.enable_enhancements and abs(ref_speed) > 0.01:
-            # Update data for enhancement computation
             self.update_enhancement_data(error, ref_speed, v_meas)
-            
-            # Component 1: Adaptive Gain Enhancement
             adaptive_enhancement = self.compute_adaptive_gain_enhancement(error, baseline_kp, baseline_ki)
-            
-            # Component 2: Data-Driven Feedforward Enhancement  
             feedforward_enhancement = self.compute_feedforward_enhancement(ref_speed, ref_time, ref_speed_array, elapsed_time)
-            
-            # Component 3: Error Pattern Learning Enhancement
             pattern_enhancement = self.compute_pattern_enhancement(ref_speed)
-            
-            # Component 4: Performance-Based Scaling
             performance_scale = self.compute_performance_scaling()
-            
-            # Combine enhancement signals
             enhancement_signal = (adaptive_enhancement + feedforward_enhancement + pattern_enhancement) * performance_scale
-            
-            # Apply conservative limiting to enhancement signal
-            max_enhancement = min(20.0, abs(baseline_control) * 0.3)  # Max 30% of baseline or 20%
+            max_enhancement = min(20.0, abs(baseline_control) * 0.3)  
             enhancement_signal = np.clip(enhancement_signal, -max_enhancement, max_enhancement)
-            
-            # Update enhancement adaptation
             self.update_enhancement_adaptation(error)
-        
-        # ═══ STEP 3: COMBINE SIGNALS ═══
-        # Special override: When both ref_speed and measured_speed are zero, force total control to zero
         if ref_speed < 0.01 and v_meas < 0.1:
             total_control = 0.0  # Complete stop - no control input
             enhancement_signal = 0.0  # Ensure enhancement is also zero for logging
@@ -690,7 +571,6 @@ class AdditiveEnhancementController:
             'baseline_integral_state': self.baseline_I_state,
             'error': error,
         }
-        
         return total_control, debug_info
     
     def update_enhancement_data(self, error, ref_speed, v_meas):
@@ -698,13 +578,9 @@ class AdditiveEnhancementController:
         self.error_history.append(error)
         self.speed_history.append(ref_speed)
         self.recent_errors.append(abs(error))
-        
-        # Compute speed derivative
         if len(self.speed_history) >= 2:
             speed_derivative = (self.speed_history[-1] - self.speed_history[-2]) / self.Ts
             self.speed_derivative_history.append(speed_derivative)
-        
-        # Compute performance score
         performance_score = 1.0 / (1.0 + abs(error))
         self.recent_performance_scores.append(performance_score)
     
@@ -712,40 +588,27 @@ class AdditiveEnhancementController:
         """Compute adaptive gain enhancement signals"""
         if len(self.recent_errors) < 10:
             return 0.0
-        
-        # Calculate additional P signal based on enhancement multiplier
-        kp_enhancement_signal = baseline_kp * error * (self.kp_enhancement_mult - 1.0)
-        
-        # Calculate additional I signal based on enhancement multiplier  
+        kp_enhancement_signal = baseline_kp * error * (self.kp_enhancement_mult - 1.0) 
         ki_enhancement_signal = baseline_ki * self.baseline_I_state * (self.ki_enhancement_mult - 1.0)
-        
         return kp_enhancement_signal + ki_enhancement_signal
     
     def compute_feedforward_enhancement(self, ref_speed, ref_time, ref_speed_array, elapsed_time):
         """Compute data-driven feedforward enhancement"""
         if ref_time is None or ref_speed_array is None or elapsed_time is None:
-            return 0.0
-        
+            return 0.0  
         try:
-            # Get speed derivative
             future_time = elapsed_time + self.FeedFwdTime * 0.5  # Shorter horizon for enhancement
             if future_time <= ref_time[-1]:
                 current_ref = float(np.interp(elapsed_time, ref_time, ref_speed_array))
                 future_ref = float(np.interp(future_time, ref_time, ref_speed_array))
                 speed_derivative = (future_ref - current_ref) / (self.FeedFwdTime * 0.5)
-                
-                # Enhanced feedforward based on learned patterns
                 if abs(speed_derivative) > 0.2:
-                    # Use learned feedforward gain or default
                     speed_key = int(ref_speed / 10) * 10  # Round to nearest 10 kph
                     learned_gain = self.learned_feedforward_map.get(speed_key, 2.0)  # Default gain
-                    
                     enhancement_ff = learned_gain * speed_derivative * self.feedforward_scaling
                     return enhancement_ff
-                    
         except:
             pass
-        
         return 0.0
     
     def compute_pattern_enhancement(self, ref_speed):
@@ -766,12 +629,8 @@ class AdditiveEnhancementController:
         """Compute performance-based scaling for enhancement signals"""
         if len(self.recent_performance_scores) < 5:
             return 0.8  # Default moderate scaling
-        
         recent_performance = np.mean(list(self.recent_performance_scores))
-        
         # Scale enhancement strength inversely with performance
-        # Good performance -> less enhancement needed
-        # Poor performance -> more enhancement needed
         if recent_performance > 0.8:  # Good performance
             scale = self.performance_scaling_range[0] + 0.2  # Lower enhancement
         elif recent_performance < 0.5:  # Poor performance
@@ -780,14 +639,12 @@ class AdditiveEnhancementController:
             # Linear interpolation
             ratio = (0.8 - recent_performance) / (0.8 - 0.5)
             scale = self.performance_scaling_range[0] + ratio * (self.performance_scaling_range[1] - self.performance_scaling_range[0])
-        
         return scale
     
     def update_enhancement_adaptation(self, error):
         """Update enhancement adaptation based on performance"""
         if len(self.recent_errors) < 12:
             return
-        
         # Performance tracking
         if abs(error) < 0.4:
             self.consecutive_good_count += 1
@@ -798,10 +655,8 @@ class AdditiveEnhancementController:
         else:
             self.consecutive_good_count = max(0, self.consecutive_good_count - 1)
             self.consecutive_poor_count = max(0, self.consecutive_poor_count - 1)
-        
         # Adaptive gain enhancement adjustment
         recent_avg_error = np.mean(list(self.recent_errors))
-        
         # Poor performance -> increase enhancement multipliers
         if self.consecutive_poor_count >= 15:
             if recent_avg_error > 1.0:
@@ -810,7 +665,6 @@ class AdditiveEnhancementController:
             if recent_avg_error > 0.8:
                 self.ki_enhancement_mult = min(self.adaptive_gain_range[1],
                                              self.ki_enhancement_mult + self.adaptation_rate * 0.7)
-        
         # Good performance -> fine-tune enhancement multipliers
         elif self.consecutive_good_count >= 25:
             if recent_avg_error < 0.3:
@@ -835,18 +689,15 @@ class AdditiveEnhancementController:
             speeds = list(self.speed_history)[-50:]
             speed_derivs = list(self.speed_derivative_history)[-50:]
             errors = list(self.error_history)[-50:]
-            
             # Group by speed ranges and learn average corrections
             for i in range(len(speeds)):
                 speed_key = int(speeds[i] / 10) * 10
                 if abs(speed_derivs[i]) > 0.5:  # Significant speed changes
                     if speed_key not in self.learned_feedforward_map:
                         self.learned_feedforward_map[speed_key] = 2.0
-                    
                     # Slowly update learned gain based on error response
                     error_response = abs(errors[i]) if i < len(errors) else 1.0
                     correction_factor = 1.0 + (1.0 - min(error_response, 2.0)) * 0.1
-                    
                     # Exponential moving average update
                     self.learned_feedforward_map[speed_key] = \
                         0.95 * self.learned_feedforward_map[speed_key] + 0.05 * correction_factor * 2.0
@@ -871,8 +722,158 @@ class AdditiveEnhancementController:
         
         # Keep learned patterns (persistent learning)
         # self.learned_feedforward_map and self.error_pattern_map are preserved
-        
-        print("[Additive Enhancement] Controller reset for new cycle")
-        print("  - Baseline PID state: Reset to initial")
-        print("  - Enhancement data: Cleared")
-        print("  - Learned patterns: Preserved")
+
+# ───────────────────────────── DeePC RELATED - HANKEL MATRIX ─────────────────────────────────
+def hankel(x, L):
+    """
+        ------Construct Hankel matrix------
+        x: data sequence (data_size, x_dim)
+        L: row dimension of the hankel matrix
+        T: data samples of data x
+        return: H(x): hankel matrix of x  H(x): (x_dim*L, T-L+1)
+                H(x) = [x(0)   x(1) ... x(T-L)
+                        x(1)   x(2) ... x(T-L+1)
+                        .       .   .     .
+                        .       .     .   .
+                        .       .       . .
+                        x(L-1) x(L) ... x(T-1)]
+                Hankel matrix of order L has size:  (x_dim*L, T-L+1)
+    """
+    if not isinstance(x, np.ndarray):
+        x = np.array(x)
+
+    T, x_dim = x.shape
+
+    Hx = np.zeros((L * x_dim, T - L + 1))
+    for i in range(L):
+        Hx[i * x_dim:(i + 1) * x_dim, :] = x[i:i + T - L + 1, :].T  # x need transpose to fit the hankel dimension
+    return Hx
+
+def hankel_full(ud, yd, Tini, THorizon):
+    """
+    Build the full DeePC Hankel matrix once by stacking past and future blocks.
+
+    Parameters:
+    -----------
+    ud : array_like, shape (T_data, u_dim)
+        Historical input sequence.
+    yd : array_like, shape (T_data, y_dim)
+        Historical output sequence.
+    Tini : int
+        Number of past (initialization) steps.
+    THorizon : int
+        Prediction horizon (number of future steps).
+
+    Returns:
+    --------
+    hankel_full_mtx : np.ndarray, shape ((u_dim + y_dim) * (Tini + THorizon), K)
+        A stacked Hankel matrix containing:
+            [ Up;  # past-input block
+              Yp;  # past-output block
+              Uf;  # future-input block
+              Yf ] # future-output block
+        where K = T_data - (Tini + THorizon) + 1 is the total number of columns. (Large number)
+    """
+    # Build block-Hankel for inputs and outputs
+    Hud = hankel(ud, Tini + THorizon)
+    Huy = hankel(yd, Tini + THorizon)
+
+    u_dim = ud.shape[1]
+    y_dim = yd.shape[1]
+
+    # Slice into past (first Tini) and future (last THorizon)
+    Up = Hud[: u_dim * Tini, :]
+    Uf = Hud[u_dim * Tini : u_dim * (Tini + THorizon), :]
+    Yp = Huy[: y_dim * Tini, :]
+    Yf = Huy[y_dim * Tini : y_dim * (Tini + THorizon), :]
+    print(f"Hankel full matrix with shape: Up{Up.shape}, Uf{Uf.shape},Yp{Yp.shape},Yf{Yf.shape}")
+    return Up, Uf, Yp, Yf
+
+def hankel_subBlocks(Up, Uf, Yp, Yf, Tini, THorizon, hankel_subB_size):
+    """
+    hankel_subB_size:   The sub-hankel matrix for current optimization problem
+    hankel_idx:         the current hankel matrix in the official run
+    The sub-hankel matrix was chosen as hankel_idx as center, and front g_dim, and back g_dim data section.
+      front g_dim for state estimation, and back g_dim for prediction. g_dim I'm leaving for 50 front and 50 back buffer by choosing g_dim = 100(hankel_subB_size=199)
+    
+    shape: Up, Uf, Tp, Tf - (Tini, g_dim)/(THorizon, g_dim)
+    """
+    # how many columns on each side of hankel_idx we want
+    g_dim = hankel_subB_size - Tini - THorizon + 1
+
+    # desired slice is [start:end] with width = end - start = g_dim
+    half  = g_dim // 2
+    start = 200 - half
+    end   = start + g_dim
+    width = end - start
+
+    # allocate zero‐padded output blocks
+    Up_cur = np.zeros((Tini,        width), dtype=Up.dtype)
+    Uf_cur = np.zeros((THorizon,    width), dtype=Uf.dtype)
+    Yp_cur = np.zeros((Tini,        width), dtype=Yp.dtype)
+    Yf_cur = np.zeros((THorizon,    width), dtype=Yf.dtype)
+
+    # clamp source columns to [0, max_col)
+    max_col = Up.shape[1]
+    src_start = max(start, 0)
+    src_end   = min(end,   max_col)
+
+    # where in the padded block these columns should go
+    dst_start = src_start - start        # if start<0, dst_start>0
+    dst_end   = dst_start + (src_end - src_start)
+
+    # copy the in-bounds slice into the zero blocks
+    Up_cur[:,      dst_start:dst_end] = Up[:Tini,         src_start:src_end]
+    Uf_cur[:,      dst_start:dst_end] = Uf[:THorizon,     src_start:src_end]
+    Yp_cur[:,      dst_start:dst_end] = Yp[:Tini,         src_start:src_end]
+    Yf_cur[:,      dst_start:dst_end] = Yf[:THorizon,     src_start:src_end]
+
+    return Up_cur, Uf_cur, Yp_cur, Yf_cur
+
+
+# def hankel_subBlocks(Up, Uf, Yp, Yf, Tini, THorizon, hankel_subB_size, hankel_idx):
+
+#     g_dim = hankel_subB_size - Tini - THorizon + 1
+#     Up_cur = Up[:Tini,         hankel_idx-g_dim:hankel_idx+g_dim]
+#     Uf_cur = Uf[:Tini,         hankel_idx-g_dim:hankel_idx+g_dim]
+#     Yp_cur = Yp[Tini:THorizon, hankel_idx-g_dim:hankel_idx+g_dim]
+#     Yf_cur = Yf[Tini:THorizon, hankel_idx-g_dim:hankel_idx+g_dim]
+#     return Up_cur, Uf_cur, Yp_cur, Yf_cur
+
+# ───────── Relay Auto-Tuner ─────────
+class RelayAutoTuner:
+    def __init__(self, apply_control, measure_output, relay_amp=10.0):
+        self.apply_control = apply_control
+        self.measure_output = measure_output
+        self.relay_amp = relay_amp
+
+    def tune(self, duration=10.0, dt=0.05):
+        t0 = time.time()
+        toggle = True
+        data_t, data_y = [], []
+        next_toggle = t0
+        while time.time() - t0 < duration:
+            now = time.time()
+            if now >= next_toggle:
+                u = self.relay_amp if toggle else -self.relay_amp
+                self.apply_control(u)
+                toggle = not toggle
+                next_toggle += dt
+            y = self.measure_output()
+            data_t.append(now - t0)
+            data_y.append(y)
+            time.sleep(dt)
+
+        # Estimate Tu from zero crossings
+        zs = [data_t[i] for i in range(1, len(data_y))
+              if data_y[i-1] * data_y[i] < 0]
+        Tu = 2 * np.mean(np.diff(zs))
+        amp = (max(data_y) - min(data_y)) / 2
+        Ku = (4 * self.relay_amp) / (np.pi * amp)
+
+        # Ziegler–Nichols PID tuning
+        Kp = 0.6 * Ku
+        Ki = Kp / (0.5 * Tu)
+        Kd = 0.125 * Kp * Tu
+        return Kp, Ki, Kd
+

@@ -106,7 +106,7 @@ if __name__ == "__main__":
         Ts=Ts, 
         T_f=T_f, 
         FeedFwdTime=FeedFwdTime,
-        enable_enhancements=True  # Set to False for exact baseline PID
+        enable_enhancements=True  
     )
     
     # ─── PCA9685 PWM SETUP ──────────────────────────────────────────────────────
@@ -153,13 +153,18 @@ if __name__ == "__main__":
         cycle_data = all_cycles[cycle_key]
         print("\n[Main] Using reference cycle '{}'".format(cycle_key))
         mat_vars = [k for k in cycle_data.keys() if not k.startswith("__")]
+        if len(mat_vars) != 1:
+            raise RuntimeError(f"Expected exactly one variable in '{cycle_key}', found {mat_vars}")
         varname = mat_vars[0]
         ref_array = cycle_data[varname]
+        if ref_array.ndim != 2 or ref_array.shape[1] < 2:
+            raise RuntimeError(f"Expected '{varname}' to be N×2 array. Got shape {ref_array.shape}")
 
         # Extract reference data
         ref_time = ref_array[:, 0].astype(float).flatten()
         ref_speed_mph = ref_array[:, 1].astype(float).flatten()
         ref_speed = ref_speed_mph * 1.60934  # Convert to kph
+        print(f"[Main] Reference loaded: shape = {ref_array.shape}")
 
         # Reset for new cycle
         loop_count = 0
@@ -167,7 +172,7 @@ if __name__ == "__main__":
         log_data = []
         next_time = time.perf_counter()
         t0 = time.perf_counter()
-        print("\n[Main] Starting Enhancement Controller")
+        print(f"\n[Main] Starting cycle '{cycle_key}' on {veh_modelName}, duration={ref_time[-1]:.2f}s")
 
         # Real-time scheduling
         try:
@@ -176,7 +181,7 @@ if __name__ == "__main__":
         except:
             print("Need root for real-time scheduling")
 
-        # ─── MAIN 10 Hz CONTROL LOOP ─────────────────────────────────────────────────
+        # ─── MAIN 100 Hz CONTROL LOOP ─────────────────────────────────────────────────
         print("[Main] Entering Enhancement control loop. Press Ctrl+C to exit.\n")
         try:
             while True:
@@ -202,8 +207,8 @@ if __name__ == "__main__":
                 F_meas = latest_force if latest_force is not None else 0.0
                 e_k = rspd_now - v_meas
 
-                # ── Additive Enhancement Control ─────────────────────────────────────
-                pid_start_time = time.perf_counter()
+                # ── Enhancement Control ─────────────────────────────────────
+                control_cal_start_time = time.perf_counter()
                 u_total, debug_info = additive_controller.compute_control(
                     error=e_k,
                     ref_speed=rspd_now,
@@ -212,8 +217,8 @@ if __name__ == "__main__":
                     ref_speed_array=ref_speed,
                     elapsed_time=elapsed_time
                 )
-                pid_end_time = time.perf_counter()
-                t_pid = (pid_end_time - pid_start_time) * 1000
+                control_cal_end_time = time.perf_counter()
+                t_control = (control_cal_end_time - control_cal_start_time) * 1000
 
                 # ── Vehicle limits and safety ────────────────────────────────
                 u = float(np.clip(u_total, -30.0, +100.0))
@@ -268,7 +273,7 @@ if __name__ == "__main__":
                         'ENHANCED' if debug_info['enhancement_enabled'] else 'BASELINE',
                         SOC_CycleStarting,
                         cycle_key,
-                        t_pid,
+                        t_control,
                         debug_info['baseline_P'],
                         debug_info['baseline_I'],
                         debug_info['baseline_FF'],
@@ -286,7 +291,7 @@ if __name__ == "__main__":
                     "v_meas": v_meas,
                     "u": u,
                     "error": e_k,
-                    "t_pid(ms)": t_pid,
+                    "t_control(ms)": t_control,
                     "baseline_control": debug_info['baseline_control'],
                     "enhancement_signal": debug_info['enhancement_signal'],
                     "total_control": debug_info['total_control'],
@@ -352,7 +357,7 @@ if __name__ == "__main__":
                     SOC_CycleStarting,
                     algorithm_name, 
                     Ts)
-                log_dir = os.path.join(base_folder, "../Log_DriveRobot")
+                log_dir = os.path.join(base_folder, "Log_DriveRobot")
                 os.makedirs(log_dir, exist_ok=True)
                 excel_path = os.path.join(log_dir, excel_filename)
                 df.to_excel(excel_path, index=False)
@@ -387,10 +392,20 @@ if __name__ == "__main__":
                     # dti_pass_rate = sum(metrics_pass) / len(metrics_pass) * 100
                     # print("  - DTI Overall Score: {:.1f}% ({}/{} metrics passed)".format(
                     #     dti_pass_rate, sum(metrics_pass), len(metrics_pass)))
+        next_cycle = cycle_keys[idx+1] if idx+1 < len(cycle_keys) else None
+        remaining_cycle = cycle_keys[idx+1:]
+        print(f"[Main] Finish Running {cycle_key} on {veh_modelName}, Next running cycle {next_cycle}, take a 5 second break...")
+        print(f"Current SOC: {BMS_socMin}%, system will stop at SOC: {SOC_Stop}% ")
+        print(f"[Main] Plan to run the following cycles: {remaining_cycle}")
         time.sleep(5)
 
-    # Final cleanup
+    # Stop CAN thread and wait up to 1 s
     dyno_can_running = False
     veh_can_running = False
+    print("All CAN_Running Stops!!!")
+    dyno_can_thread.join(timeout=1.0)
+    veh_can_thread.join(timeout=1.0)
     bus.close()
-    print("[Main] Enhancedcontroller exited successfully.")
+    print("All channels set to 0%, bus closed.")
+    print("[Main] pca board PWM signal cleaned up and exited.")
+    print("[Main] Cleaned up and exited.")
