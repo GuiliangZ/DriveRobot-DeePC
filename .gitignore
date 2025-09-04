@@ -2,5 +2,12 @@
 *.so
 *.c
 *.o
+*.h
+*.npz
+*.xlsx
+*.pxd
+*.
 *.excel
 *.csv
+*.json
+*.deb

@@ -1,0 +1,19 @@
+# (Re-)load all CAN drivers
+sudo modprobe can && sudo modprobe can_raw       # generic CAN support
+sudo modprobe mttcan                             # on-board CAN controller
+sudo modprobe kvaser_usb                         # USB Kvaser Leaf
+sudo modprobe can       # core CAN support
+sudo modprobe can_raw   # raw-socket protocol
+sudo modprobe can_dev   # network interface “canX” support
+sudo modprobe kvaser_usb
+sudo ip link set can0 down                         # if it was already up
+sudo ip link set can0 type can bitrate 500000
+sudo ip link set can0 up
+sudo ip link set can1 down
+sudo ip link set can1 type can bitrate 500000
+sudo ip link set can1 up
+i2cdetect -l
+ls /sys/class/net/ | grep can
+
+
+

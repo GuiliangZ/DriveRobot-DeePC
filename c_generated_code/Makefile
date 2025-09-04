@@ -74,8 +74,8 @@ OBJ+= $(OCP_OBJ)
 EXTERNAL_DIR=
 EXTERNAL_LIB=
 
-INCLUDE_PATH = /home/guiliang/acados/include
-LIB_PATH = /home/guiliang/acados/lib
+INCLUDE_PATH = /home/rangedriverobot/acados/include
+LIB_PATH = /home/rangedriverobot/acados/lib
 
 # preprocessor flags for make's implicit rules
 CPPFLAGS+= -I$(INCLUDE_PATH)
@@ -129,17 +129,18 @@ ocp_cython_c: ocp_shared_lib
 	-o acados_ocp_solver_pyx.c \
 	-I $(INCLUDE_PATH)/../interfaces/acados_template/acados_template \
 	$(INCLUDE_PATH)/../interfaces/acados_template/acados_template/acados_ocp_solver_pyx.pyx \
-	-I /home/guiliang/Desktop/DriveRobot-DeePC/c_generated_code \
+	-I /home/rangedriverobot/DriveRobot-DeePC/c_generated_code \
 
 ocp_cython_o: ocp_cython_c
 	$(CC) $(ACADOS_FLAGS) -c -O2 \
 	-fPIC \
+	-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION \
 	-o acados_ocp_solver_pyx.o \
 	-I $(INCLUDE_PATH)/blasfeo/include/ \
 	-I $(INCLUDE_PATH)/hpipm/include/ \
 	-I $(INCLUDE_PATH) \
-	-I /home/guiliang/anaconda3/envs/drivingRobot/lib/python3.13/site-packages/numpy/_core/include \
-	-I /home/guiliang/anaconda3/envs/drivingRobot/include/python3.13 \
+	-I /home/rangedriverobot/miniforge3/lib/python3.12/site-packages/numpy/_core/include \
+	-I /home/rangedriverobot/miniforge3/include/python3.12 \
 	acados_ocp_solver_pyx.c \
 
 ocp_cython: ocp_cython_o

@@ -59,7 +59,7 @@ veh_can_running  = True
 BMS_socMin = None                                   # Measured current vehicle SOC from Vehicle CAN
 # dyno_can_running  = False                           # For temperal debugging
 # veh_can_running  = False 
-CP2112_BUS   = 3         # e.g. /dev/i2c-3
+CP2112_BUS   = 22         # e.g. /dev/i2c-3
 
 # ──────────────────────────── CAN LISTENER THREAD ──────────────────────────────
 def dyno_can_listener_thread(dbc_path: str, can_iface: str):
@@ -177,12 +177,12 @@ if __name__ == "__main__":
     # s = 1                                           # How many steps before we solve again the DeePC problem - how many control input used per iteration
     # DeePC related hyperparameters to tune
     recompile_solver = False                         # True to recompile the acados solver at change of following parameters. False to use the previously compiled solver
-    use_data_for_hankel_cached = False                  # when want to load new excel data for building hankel matrix
-    use_hankel_cached = False
+    # use_data_for_hankel_cached = False                  # when want to load new excel data for building hankel matrix
+    # use_hankel_cached = False
     # Flip those logic to reuse what has already compiled to save time
     # recompile_solver = True
-    # use_data_for_hankel_cached = True                   # True to reuse the .npz file build from excel sheet
-    # use_hankel_cached = True
+    use_data_for_hankel_cached = True                   # True to reuse the .npz file build from excel sheet
+    use_hankel_cached = True
 
     Tini        = 5                                 # Size of the initial set of data       - 0.5s(5s) bandwidth (50)
     THorizon    = 5                                  # Prediction Horizon length - Np        - 0.5s(5s) bandwidth (50) 
@@ -274,9 +274,9 @@ if __name__ == "__main__":
     init_pca9685(bus, freq_hz=1000.0)
 
     # ─── START CAN LISTENER THREAD ───────────────────────────────────────────────
-    DYNO_DBC_PATH = '/home/guiliang/Desktop/DrivingRobot/KAVL_V3.dbc'
+    DYNO_DBC_PATH = '/home/rangedriverobot/DriveRobot-DeePC/KAVL_V3.dbc'
     DYNO_CAN_INTERFACE = 'can0'
-    VEH_DBC_PATH = '/home/guiliang/Desktop/DrivingRobot/vehBus.dbc'
+    VEH_DBC_PATH = '/home/rangedriverobot/DriveRobot-DeePC/vehBus.dbc'
     VEH_CAN_INTERFACE = 'can1'
     if dyno_can_running:
         dyno_can_thread = threading.Thread(
@@ -456,7 +456,7 @@ if __name__ == "__main__":
                     f"v_meas={v_meas:6.2f}kph, e={e_k:+6.2f}kph, "
                     f"u={u:6.2f}%, "
                     f"F_dyno={F_meas:6.2f} N, "
-                    f"BMS_socMin={BMS_socMin:6.2f} %,"
+                    # f"BMS_socMin={BMS_socMin:6.2f} %,"
                     f"SOC_CycleStarting AT={SOC_CycleStarting:6.2f} %, "
                     f"t_deepc={t_deepc:6.3f} ms, "
                     f"actual_elapsed_time_per_loop={actual_elapsed_time:6.3f} ms, "
@@ -507,7 +507,7 @@ if __name__ == "__main__":
                     "error":                e_k,
                     "t_deepc(ms)":          t_deepc,
                     "DeePC_Cost" :          cost,
-                    "BMS_socMin":           BMS_socMin,
+                    # "BMS_socMin":           BMS_socMin,
                     "SOC_CycleStarting":    SOC_CycleStarting,
                     "exist_feasible_sol":   exist_feasible_sol,
                     "DeePC_control":        DeePC_control,
@@ -526,8 +526,8 @@ if __name__ == "__main__":
                     "q_weights":            q_weights,
                     "r_weights":            r_weights,
                 })
-                if BMS_socMin <= SOC_Stop:
-                    break
+                # if BMS_socMin <= SOC_Stop:
+                #     break
 
         except KeyboardInterrupt:
             print("\n[Main] KeyboardInterrupt detected. Exiting…")

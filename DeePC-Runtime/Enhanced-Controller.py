@@ -40,7 +40,7 @@ latest_force = None
 dyno_can_running = True
 veh_can_running = True
 BMS_socMin = None
-CP2112_BUS = 3
+CP2112_BUS = 22
 
 # ──────────────────────────── CAN LISTENER THREADS ──────────────────────────────
 def dyno_can_listener_thread(dbc_path: str, can_iface: str):
@@ -114,9 +114,9 @@ if __name__ == "__main__":
     init_pca9685(bus, freq_hz=1000.0)
 
     # ─── START CAN LISTENER THREADS ───────────────────────────────────────────────
-    DYNO_DBC_PATH = '/home/guiliang/Desktop/DrivingRobot/KAVL_V3.dbc'
+    DYNO_DBC_PATH = '/home/rangedriverobot/DriveRobot-DeePC/KAVL_V3.dbc'
     DYNO_CAN_INTERFACE = 'can0'
-    VEH_DBC_PATH = '/home/guiliang/Desktop/DrivingRobot/vehBus.dbc'
+    VEH_DBC_PATH = '/home/rangedriverobot/DriveRobot-DeePC/vehBus.dbc'
     VEH_CAN_INTERFACE = 'can1'
     
     if dyno_can_running:
@@ -252,7 +252,7 @@ if __name__ == "__main__":
                     "enh={:+5.2f}%, "
                     "Kp_enh={:4.2f}x, "
                     "perf_scale={:4.2f}, "
-                    "BMS_socMIN={:6.2f}%, "
+                    # "BMS_socMIN={:6.2f}%, "
                     "{}, "
                     "StartingSOC={:6.2f}%, "
                     "RunningCycle={} "
@@ -269,7 +269,7 @@ if __name__ == "__main__":
                         debug_info['enhancement_signal'],
                         debug_info['kp_enhancement_mult'],
                         debug_info['performance_scaling'],
-                        BMS_socMin,
+                        # BMS_socMin,
                         'ENHANCED' if debug_info['enhancement_enabled'] else 'BASELINE',
                         SOC_CycleStarting,
                         cycle_key,
@@ -307,13 +307,13 @@ if __name__ == "__main__":
                     "enhancement_enabled": debug_info['enhancement_enabled'],
                     "tracking_success": debug_info['tracking_success'],
                     "baseline_integral_state": debug_info['baseline_integral_state'],
-                    "BMS_socMin": BMS_socMin,
+                    # "BMS_socMin": BMS_socMin,
                     "SOC_CycleStarting": SOC_CycleStarting,
                     "actual_elapsed_time": actual_elapsed_time,
                 })
                 
-                if BMS_socMin <= SOC_Stop:
-                    break
+                # if BMS_socMin <= SOC_Stop:
+                #     break
 
         except KeyboardInterrupt:
             print("\n[Main] KeyboardInterrupt detected. Exiting...")
