@@ -141,7 +141,13 @@ if __name__ == "__main__":
     cycle_keys = choose_cycle_key(all_cycles)
     veh_modelName = choose_vehicleModelName()
 
-    for idx, cycle_key in enumerate(cycle_keys):
+    final_cycle_keys = []
+    for ck in cycle_keys:
+        final_cycle_keys.append(ck)
+        if ck == "CYC_SMCTPlus_RANGE" and "SMCTRange_65mph_Depletion" in all_cycles:
+            final_cycle_keys.append("SMCTRange_65mph_Depletion")
+
+    for idx, cycle_key in enumerate(final_cycle_keys):
         # SOC management
         if BMS_socMin is not None and BMS_socMin <= SOC_Stop:
             break
@@ -173,6 +179,15 @@ if __name__ == "__main__":
         next_time = time.perf_counter()
         t0 = time.perf_counter()
         print(f"\n[Main] Starting cycle '{cycle_key}' on {veh_modelName}, duration={ref_time[-1]:.2f}s")
+
+        # ── Special stop condition state ───
+        RSPD_TARGET = 104.6    # 65mph for SMCTPlus depletion speed
+        RSPD_TOL = 1.0
+        RSPD_LOW = RSPD_TARGET - RSPD_TOL
+        RSPD_HIGH = RSPD_TARGET + RSPD_TOL
+        RSPD_MIN_DUR = 3600.0  # seconds - at least keep this long to trigger
+        V_DROP_MAX = 101.0     # interprets "100 +1" as <= 101 kph 
+        steady_start = None    # when we first enter the 104.6±1 band
 
         # Real-time scheduling
         try:
@@ -207,6 +222,13 @@ if __name__ == "__main__":
                 F_meas = latest_force if latest_force is not None else 0.0
                 e_k = rspd_now - v_meas
 
+                # ── Track special-condition dwell time ─────────────────────────
+                if RSPD_LOW <= rspd_now <= RSPD_HIGH:
+                    if steady_start is None:
+                        steady_start = elapsed_time
+                else:
+                    steady_start = None  # left the band; reset the timer
+
                 # ── Enhancement Control ─────────────────────────────────────
                 control_cal_start_time = time.perf_counter()
                 u_total, debug_info = additive_controller.compute_control(
@@ -230,6 +252,16 @@ if __name__ == "__main__":
                 
                 if latest_speed is not None and latest_speed >= 140.0:
                     u = 0.0
+                    break
+
+                # ── Special stop condition: 104.6±1 for 3600s AND v_meas <= 101 ──
+                if (steady_start is not None
+                    and (elapsed_time - steady_start) >= RSPD_MIN_DUR
+                    and v_meas <= V_DROP_MAX):
+                    # cut output then stop the cycle
+                    set_duty_cycle(bus, 0, 0.0)
+                    set_duty_cycle(bus, 4, 0.0)
+                    print("[Main] Special stop triggered: ref≈104.6±1 for 3600s and v_meas<=101. Stopping now.")
                     break
 
                 # ── Send PWM to PCA9685 ──────────────────────────────────────────

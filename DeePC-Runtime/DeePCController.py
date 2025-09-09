@@ -299,7 +299,14 @@ if __name__ == "__main__":
     cycle_keys = choose_cycle_key(all_cycles)           # Prompt the user to choose multiple drive cycles the user wish to test
     veh_modelName = choose_vehicleModelName()           # Prompt the user to choose the model of testing vehicle for logging purpose
 
-    for idx, cycle_key in enumerate(cycle_keys):
+    # ---- for SMCTPlus 65mph depletion ----------------------------
+    final_cycle_keys = []
+    for ck in cycle_keys:
+        final_cycle_keys.append(ck)
+        if ck == "CYC_SMCTPlus_RANGE" and "SMCTRange_65mph_Depletion" in all_cycles:
+            final_cycle_keys.append("SMCTRange_65mph_Depletion")
+
+    for idx, cycle_key in enumerate(final_cycle_keys):
         # ----------------Stop the test if the vehicle SOC is too low to prevent draining the vehicle---------------------
         # SOC management
         if BMS_socMin is not None and BMS_socMin <= SOC_Stop:
@@ -348,6 +355,15 @@ if __name__ == "__main__":
         t0             = time.perf_counter()
         print(f"\n[Main] Starting cycle '{cycle_key}' on {veh_modelName}, duration={ref_time[-1]:.2f}s")
 
+        # ── SMCTPlus 65mph depletion - Special stop condition state ───
+        RSPD_TARGET = 104.6    # 65mph for SMCTPlus depletion speed
+        RSPD_TOL = 1.0
+        RSPD_LOW = RSPD_TARGET - RSPD_TOL
+        RSPD_HIGH = RSPD_TARGET + RSPD_TOL
+        RSPD_MIN_DUR = 3600.0  # seconds - at least keep this long to trigger
+        V_DROP_MAX = 101.0     # interprets "100 +1" as <= 101 kph 
+        steady_start = None    # when we first enter the 104.6±1 band
+
         # ----------------Real-time Effort (try to avoid system lags - each loop more than 10ms)
         # For real-time effort - put into kernel - linux 5.15.0-1087-realtime for strict time update - but this kernel doesn't have wifi and nvidia drive
         SCHED_FIFO = os.SCHED_FIFO
@@ -394,6 +410,13 @@ if __name__ == "__main__":
                 F_meas = latest_force if latest_force is not None else 0.0
                 e_k    = rspd_now - v_meas
                 
+                # ── Track special-condition dwell time ─────────────────────────
+                if RSPD_LOW <= rspd_now <= RSPD_HIGH:
+                    if steady_start is None:
+                        steady_start = elapsed_time
+                else:
+                    steady_start = None  # left the band; reset the timer
+
                 # ── Implementing real time acados based solver for DeePC ────────
                 # if hankel_idx == DeePC_kickIn_time (initial time where DeePC kicks in): # At start: can build a local hankel matrix now, start to use DeePC
                 # if hankel_idx+THorizon >= DeePC_stop_time  # At the end, hankel matrix exceed the full length of reference data
@@ -439,6 +462,16 @@ if __name__ == "__main__":
                     u = 0.0
                     break
 
+                # ── Special stop condition: 104.6±1 for 3600s AND v_meas <= 101 ──
+                if (steady_start is not None
+                    and (elapsed_time - steady_start) >= RSPD_MIN_DUR
+                    and v_meas <= V_DROP_MAX):
+                    # cut output then stop the cycle
+                    set_duty_cycle(bus, 0, 0.0)
+                    set_duty_cycle(bus, 4, 0.0)
+                    print("[Main] Special stop triggered: ref≈104.6±1 for 3600s and v_meas<=101. Stopping now.")
+                    break
+                
                 # ──  Send PWM to PCA9685: accel (ch=0) if u>=0, else brake (ch=4) ──
                 if u >= 0.0:
                     set_duty_cycle(bus, 4, 0.0)                                    # ensure brake channel is zero
