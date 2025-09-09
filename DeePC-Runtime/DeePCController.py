@@ -59,7 +59,7 @@ veh_can_running  = True
 BMS_socMin = None                                   # Measured current vehicle SOC from Vehicle CAN
 # dyno_can_running  = False                           # For temperal debugging
 # veh_can_running  = False 
-CP2112_BUS   = 22         # e.g. /dev/i2c-3
+CP2112_BUS   = 15         # e.g. /dev/i2c-3
 
 # ──────────────────────────── CAN LISTENER THREAD ──────────────────────────────
 def dyno_can_listener_thread(dbc_path: str, can_iface: str):

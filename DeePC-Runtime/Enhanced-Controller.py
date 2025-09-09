@@ -40,7 +40,7 @@ latest_force = None
 dyno_can_running = True
 veh_can_running = True
 BMS_socMin = None
-CP2112_BUS = 22
+CP2112_BUS = 15
 
 # ──────────────────────────── CAN LISTENER THREADS ──────────────────────────────
 def dyno_can_listener_thread(dbc_path: str, can_iface: str):
