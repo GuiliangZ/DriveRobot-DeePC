@@ -447,7 +447,6 @@ class deepctools():
         t0 = time.time()
         status = self.solver.solve()
         False_feasible_sol = (status == 1)
-        False_feasible_sol = random.random()<0.053
         t_s = round((time.time() - t0) * 1_000, 3)
         g_opt = self.solver.get(0,"x")
         u_opt = Uf_cur @ g_opt              # which is same as np.matmul(Uf_cur, g_opt)
