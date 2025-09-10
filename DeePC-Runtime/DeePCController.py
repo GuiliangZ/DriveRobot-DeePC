@@ -59,7 +59,7 @@ veh_can_running  = True
 BMS_socMin = None                                   # Measured current vehicle SOC from Vehicle CAN
 # dyno_can_running  = False                           # For temperal debugging
 # veh_can_running  = False 
-CP2112_BUS   = 15         # e.g. /dev/i2c-3
+CP2112_BUS   = 15         # e.g. /dev/i2c-3 per this example it should be 3 (refer this from terminal)
 
 # ──────────────────────────── CAN LISTENER THREAD ──────────────────────────────
 def dyno_can_listener_thread(dbc_path: str, can_iface: str):
@@ -305,6 +305,8 @@ if __name__ == "__main__":
         final_cycle_keys.append(ck)
         if ck == "CYC_SMCTPlus_RANGE" and "SMCTRange_65mph_Depletion" in all_cycles:
             final_cycle_keys.append("SMCTRange_65mph_Depletion")
+        # if ck == "CYC_SC03" and "SMCTRange_65mph_Depletion" in all_cycles:
+        #     final_cycle_keys.append("SMCTRange_65mph_Depletion")
 
     for idx, cycle_key in enumerate(final_cycle_keys):
         # ----------------Stop the test if the vehicle SOC is too low to prevent draining the vehicle---------------------
@@ -360,7 +362,7 @@ if __name__ == "__main__":
         RSPD_TOL = 2.0
         RSPD_LOW = RSPD_TARGET - RSPD_TOL
         RSPD_HIGH = RSPD_TARGET + RSPD_TOL
-        RSPD_MIN_DUR = 3600.0  # seconds - at least keep this long to trigger
+        RSPD_MIN_DUR = 180.0  # seconds - at least keep this long to trigger
         V_DROP_MAX = 101.0     # interprets "100 +1" as <= 101 kph 
         steady_start = None    # when we first enter the 105±2 band
 
@@ -396,15 +398,27 @@ if __name__ == "__main__":
                 else:
                     rspd_now = float(np.interp(elapsed_time, ref_time, ref_speed))
 
+                # # -- Interpolate reference speed for DeePC ref_horizon_speed -------------------------
+                # t_future = elapsed_time + Ts * np.arange(THorizon)      # look 0.01 * THorizon s ahead of time
+                # if t_future[-1] >= ref_time[-1]:                        # if the last future time is beyond your reference horizon...
+                #     valid_mask = t_future <= ref_time[-1]               # build a boolean mask of all valid future times
+                #     THorizon = int(valid_mask.sum())                    # shrink THorizon to only those valid steps - !! Horizon will change in last few steps
+                #     t_future = t_future[valid_mask]             
+                # ref_horizon_speed = np.interp(t_future, ref_time, ref_speed)
+                # ref_horizon_speed = ref_horizon_speed.reshape(-1, 1)
+
                 # -- Interpolate reference speed for DeePC ref_horizon_speed -------------------------
-                t_future = elapsed_time + Ts * np.arange(THorizon)      # look 0.01 * THorizon s ahead of time
-                if t_future[-1] >= ref_time[-1]:                        # if the last future time is beyond your reference horizon...
-                    valid_mask = t_future <= ref_time[-1]               # build a boolean mask of all valid future times
-                    THorizon = int(valid_mask.sum())                    # shrink THorizon to only those valid steps - !! Horizon will change in last few steps
-                    t_future = t_future[valid_mask]             
-                ref_horizon_speed = np.interp(t_future, ref_time, ref_speed)
+                t_future = elapsed_time + Ts * np.arange(THorizon)   # look ahead THorizon steps
+                # interpolate only where inside reference
+                ref_horizon_speed = np.interp(
+                    np.clip(t_future, ref_time[0], ref_time[-1]),  # clip times to valid range
+                    ref_time,
+                    ref_speed)
+                # if some future times exceeded ref_time[-1], replace those with 0
+                ref_horizon_speed[t_future > ref_time[-1]] = 0.0
+                # ensure column vector shape
                 ref_horizon_speed = ref_horizon_speed.reshape(-1, 1)
-                
+                                
                 # ── Compute current error e[k] and future error e_fut[k] ────────
                 v_meas = latest_speed if latest_speed is not None else 0.0
                 F_meas = latest_force if latest_force is not None else 0.0
@@ -572,7 +586,7 @@ if __name__ == "__main__":
                 datetime = datetime.now()
                 df['run_datetime'] = datetime.strftime("%Y-%m-%d %H:%M:%S")
                 timestamp_str = datetime.strftime("%H%M_%m%d")
-                excel_filename = f"{timestamp_str}_DR_log_{veh_modelName}_{cycle_key}_Start{SOC_CycleStarting}%_{algorithm_name}_Ts{Ts}_Q{Q_val}_R{R_val}_decayQ{decay_rate_q}_decayR{decay_rate_r}_Tini{Tini}_gDim{g_dim}_λg{lambda_g_val}_λu{lambda_u_val}__λy{lambda_y_val}.xlsx"
+                excel_filename = f"{timestamp_str}_DR_log_{veh_modelName}_{cycle_key}_Start{SOC_CycleStarting}%_{algorithm_name}.xlsx"
                 log_dir = os.path.join(base_folder, "Log_DriveRobot")
                 os.makedirs(log_dir, exist_ok=True)     
                 excel_path = os.path.join(log_dir, excel_filename)
