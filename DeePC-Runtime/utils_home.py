@@ -510,7 +510,7 @@ class AdditiveEnhancementController:
         self.recent_errors = deque(maxlen=15)
         self.recent_performance_scores = deque(maxlen=10)
         
-    def compute_control(self, error, ref_speed, v_meas, ref_time=None, ref_speed_array=None, elapsed_time=None):
+    def compute_DeePC_control(self, u_opt, g_opt, t_deepc, False_feasible_sol, cost, error, ref_speed, v_meas, ref_time=None, ref_speed_array=None, elapsed_time=None):
         baseline_kp, baseline_ki, baseline_kd, baseline_kff = get_gains_for_speed(ref_speed)
         baseline_P = baseline_kp * error
         if ref_speed > 0.1 and v_meas > 0.1:

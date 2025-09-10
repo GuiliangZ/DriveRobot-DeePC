@@ -6,7 +6,7 @@ version: 1.0.0
 Description: Toolbox to formulate the real-time DeePC problem using Acados solver
 """
 import time
-import warnings
+import warnings, random
 import numpy as np
 from scipy.linalg import block_diag
 import casadi as cs
@@ -446,13 +446,12 @@ class deepctools():
 
         t0 = time.time()
         status = self.solver.solve()
-        exist_feasible_sol = (status == 1)
+        False_feasible_sol = (status == 1)
         t_s = round((time.time() - t0) * 1_000, 3)
-
         g_opt = self.solver.get(0,"x")
         u_opt = Uf_cur @ g_opt              # which is same as np.matmul(Uf_cur, g_opt)
         cost = self.solver.get_cost()
-        return u_opt, g_opt, t_s, exist_feasible_sol, cost
+        return u_opt, g_opt, t_s, False_feasible_sol, cost
     
     @timer
     def init_DeePCsolver(self, uloss='u', ineqconidx=None, ineqconbd=None, opts={}):

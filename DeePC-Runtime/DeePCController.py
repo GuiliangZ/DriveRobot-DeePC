@@ -356,13 +356,13 @@ if __name__ == "__main__":
         print(f"\n[Main] Starting cycle '{cycle_key}' on {veh_modelName}, duration={ref_time[-1]:.2f}s")
 
         # ── SMCTPlus 65mph depletion - Special stop condition state ───
-        RSPD_TARGET = 104.6    # 65mph for SMCTPlus depletion speed
-        RSPD_TOL = 1.0
+        RSPD_TARGET = 105    # 65mph for SMCTPlus depletion speed
+        RSPD_TOL = 2.0
         RSPD_LOW = RSPD_TARGET - RSPD_TOL
         RSPD_HIGH = RSPD_TARGET + RSPD_TOL
         RSPD_MIN_DUR = 3600.0  # seconds - at least keep this long to trigger
         V_DROP_MAX = 101.0     # interprets "100 +1" as <= 101 kph 
-        steady_start = None    # when we first enter the 104.6±1 band
+        steady_start = None    # when we first enter the 105±2 band
 
         # ----------------Real-time Effort (try to avoid system lags - each loop more than 10ms)
         # For real-time effort - put into kernel - linux 5.15.0-1087-realtime for strict time update - but this kernel doesn't have wifi and nvidia drive
@@ -441,7 +441,8 @@ if __name__ == "__main__":
                 u_opt, g_opt, t_deepc, False_feasible_sol, cost = dpc.acados_solver_step(uini=u_init, yini=y_init, yref=ref_horizon_speed,           # For real-time Acados solver-Generate a time series of "optimal" control input given v_ref and previous u and v_dyno(for implicit state estimation)
                                                                     Up_cur=Up_cur, Uf_cur=Uf_cur, Yp_cur=Yp_cur, Yf_cur=Yf_cur, Q_val=Q, R_val=R,
                                                                     lambda_g_val=lambda_g, lambda_y_val=lambda_y, lambda_u_val=lambda_u, g_prev = g_prev)     
-                u_total, debug_info = controller.compute_control(error=e_k, ref_speed=rspd_now,v_meas=v_meas,ref_time=ref_time,ref_speed_array=ref_speed,elapsed_time=elapsed_time)
+                u_total, debug_info = controller.compute_DeePC_control(u_opt=u_opt, g_opt=g_opt, t_deepc=t_deepc, False_feasible_sol=False_feasible_sol, cost=cost, 
+                                                                       error=e_k, ref_speed=rspd_now,v_meas=v_meas,ref_time=ref_time,ref_speed_array=ref_speed,elapsed_time=elapsed_time)
                 u_PID = controller.baseline_PID_control(error=e_k, ref_speed=rspd_now,v_meas=v_meas,ref_time=ref_time,ref_speed_array=ref_speed,elapsed_time=elapsed_time)
                 if np.all(u_opt == 0):
                     g_prev = None
@@ -491,11 +492,13 @@ if __name__ == "__main__":
                     f"v_meas={v_meas:6.2f}kph, e={e_k:+6.2f}kph, "
                     f"u={u:6.2f}%, "
                     f"F_dyno={F_meas:6.2f} N, "
+                    f"t_deepc={t_deepc:6.3f} ms, "
+                    f"Baseline_PID={baseline_PID_Control_indicator}, "
+                    f"DeePC={DeePC_Control_Indicator}, "
                     # f"BMS_socMin={BMS_socMin:6.2f} %,"
                     # f"SOC_CycleStarting AT={SOC_CycleStarting:6.2f} %, "
-                    f"t_deepc={t_deepc:6.3f} ms, "
-                    f"actual_elapsed_time_per_loop={actual_elapsed_time:6.3f} ms, "
-                    f"actual_control_frequency={actual_control_frequency:6.3f} Hz"
+                    # f"actual_elapsed_time_per_loop={actual_elapsed_time:6.3f} ms, "
+                    # f"actual_control_frequency={actual_control_frequency:6.3f} Hz"
                 )
 
                 # Debug purpose
