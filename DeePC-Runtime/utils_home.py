@@ -723,6 +723,32 @@ class AdditiveEnhancementController:
         # Keep learned patterns (persistent learning)
         # self.learned_feedforward_map and self.error_pattern_map are preserved
 
+    def baseline_PID_control(self, error, ref_speed, v_meas, ref_time=None, ref_speed_array=None, elapsed_time=None):
+        baseline_kp, baseline_ki, baseline_kd, baseline_kff = get_gains_for_speed(ref_speed)
+        baseline_P = baseline_kp * error
+        if ref_speed > 0.1 and v_meas > 0.1:
+            self.baseline_I_state = self.baseline_I_state + baseline_ki * self.Ts * error
+            baseline_I = self.baseline_I_state
+        else:
+            self.baseline_I_state = 0.0  # RESET INTEGRAL STATE
+            baseline_I = 0.0
+        baseline_D = 0.0
+        baseline_FF = 0.0
+        if ref_time is not None and ref_speed_array is not None and elapsed_time is not None:
+            try:
+                future_time = elapsed_time + self.FeedFwdTime
+                if future_time <= ref_time[-1]:
+                    current_ref = float(np.interp(elapsed_time, ref_time, ref_speed_array))
+                    future_ref = float(np.interp(future_time, ref_time, ref_speed_array))
+                    ref_rate = (future_ref - current_ref) / self.FeedFwdTime
+                    if abs(ref_rate) > 0.1:
+                        baseline_FF = baseline_kff * ref_rate * 0.8  # Standard scaling
+            except:
+                baseline_FF = 0.0
+        baseline_control = baseline_P + baseline_I + baseline_D + baseline_FF
+        self.baseline_prev_error = error
+        return baseline_control
+
 # ───────────────────────────── DeePC RELATED - HANKEL MATRIX ─────────────────────────────────
 def hankel(x, L):
     """

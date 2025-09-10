@@ -434,24 +434,26 @@ if __name__ == "__main__":
                 
                  # ── Implement DeePC control only when hankel matrix, Tini, Uini are not none  ────────
                 # check that none of the required arrays contain a zero
-                arrays_to_check = [Up_cur, Uf_cur, Yp_cur, Yf_cur, u_init, y_init, ref_horizon_speed]
-                DeePC_control = all(np.all(arr != 0) for arr in arrays_to_check)
-                u_opt, g_opt, t_deepc, exist_feasible_sol, cost = dpc.acados_solver_step(uini=u_init, yini=y_init, yref=ref_horizon_speed,           # For real-time Acados solver-Generate a time series of "optimal" control input given v_ref and previous u and v_dyno(for implicit state estimation)
+                # arrays_to_check = [Up_cur, Uf_cur, Yp_cur, Yf_cur, u_init, y_init, ref_horizon_speed]
+                # DeePC_control = all(np.all(arr != 0) for arr in arrays_to_check)
+                baseline_PID_Control_indicator = 0
+                DeePC_Control_Indicator = 0
+                u_opt, g_opt, t_deepc, False_feasible_sol, cost = dpc.acados_solver_step(uini=u_init, yini=y_init, yref=ref_horizon_speed,           # For real-time Acados solver-Generate a time series of "optimal" control input given v_ref and previous u and v_dyno(for implicit state estimation)
                                                                     Up_cur=Up_cur, Uf_cur=Uf_cur, Yp_cur=Yp_cur, Yf_cur=Yf_cur, Q_val=Q, R_val=R,
                                                                     lambda_g_val=lambda_g, lambda_y_val=lambda_y, lambda_u_val=lambda_u, g_prev = g_prev)     
                 u_total, debug_info = controller.compute_control(error=e_k, ref_speed=rspd_now,v_meas=v_meas,ref_time=ref_time,ref_speed_array=ref_speed,elapsed_time=elapsed_time)
+                u_PID = controller.baseline_PID_control(error=e_k, ref_speed=rspd_now,v_meas=v_meas,ref_time=ref_time,ref_speed_array=ref_speed,elapsed_time=elapsed_time)
                 if np.all(u_opt == 0):
                     g_prev = None
                 else:
                     g_prev = g_opt
 
-                if cost < 0:
-                    DeePC_control = False
-
-                if DeePC_control and exist_feasible_sol:
-                    u_unclamped = u_opt[0]
+                if False_feasible_sol:
+                    u_unclamped = u_PID
+                    baseline_PID_Control_indicator = 1
                 else:
                     u_unclamped = u_total
+                    DeePC_Control_Indicator = 1
 
                 # ──  Add a vehicle speed limiter safety feature (Theoretically don't need this part because all the control contraints are baked in the DeePC formulation) ────────
                 u = float(np.clip(u_unclamped, -30.0, +100.0))          # Total output u[k], clipped to [-15, +100]
@@ -471,7 +473,7 @@ if __name__ == "__main__":
                     set_duty_cycle(bus, 4, 0.0)
                     print("[Main] Special stop triggered: ref≈104.6±1 for 3600s and v_meas<=101. Stopping now.")
                     break
-                
+
                 # ──  Send PWM to PCA9685: accel (ch=0) if u>=0, else brake (ch=4) ──
                 if u >= 0.0:
                     set_duty_cycle(bus, 4, 0.0)                                    # ensure brake channel is zero
@@ -490,7 +492,7 @@ if __name__ == "__main__":
                     f"u={u:6.2f}%, "
                     f"F_dyno={F_meas:6.2f} N, "
                     # f"BMS_socMin={BMS_socMin:6.2f} %,"
-                    f"SOC_CycleStarting AT={SOC_CycleStarting:6.2f} %, "
+                    # f"SOC_CycleStarting AT={SOC_CycleStarting:6.2f} %, "
                     f"t_deepc={t_deepc:6.3f} ms, "
                     f"actual_elapsed_time_per_loop={actual_elapsed_time:6.3f} ms, "
                     f"actual_control_frequency={actual_control_frequency:6.3f} Hz"
@@ -538,26 +540,19 @@ if __name__ == "__main__":
                     "v_meas":               v_meas,
                     "u":                    u,
                     "error":                e_k,
-                    "t_deepc(ms)":          t_deepc,
-                    "DeePC_Cost" :          cost,
                     # "BMS_socMin":           BMS_socMin,
-                    "SOC_CycleStarting":    SOC_CycleStarting,
-                    "exist_feasible_sol":   exist_feasible_sol,
-                    "DeePC_control":        DeePC_control,
-                    "PID_control_activate": PID_control_activate,
+                    # "SOC_CycleStarting":    SOC_CycleStarting,
+                    "DeePC_Control_Indicator":            DeePC_Control_Indicator,
+                    "baseline_PID_Control_indicator":     baseline_PID_Control_indicator,
                     "actual_elapsed_time":  actual_elapsed_time,
                     "hankel_idx":           hankel_idx,
-                    "vref":                 ref_horizon_speed,
+                    "vref_horizon":         ref_horizon_speed,
                     "u_init":               u_init,
                     "y_init":               y_init,
-                    "Up_cur":               Up_cur,
-                    "Uf_cur":               Uf_cur,
-                    "Yp_cur":               Yp_cur,
-                    "Yf_cur":               Yf_cur,
-                    "g_opt" :               g_opt,
-                    "u_opt" :               u_opt,
                     "q_weights":            q_weights,
                     "r_weights":            r_weights,
+                    "t_deepc(ms)":          t_deepc,
+                    "DeePC_Cost" :          cost,
                 })
                 # if BMS_socMin <= SOC_Stop:
                 #     break
