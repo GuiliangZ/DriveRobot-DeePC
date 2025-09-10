@@ -540,19 +540,17 @@ if __name__ == "__main__":
                     "v_meas":               v_meas,
                     "u":                    u,
                     "error":                e_k,
-                    # "BMS_socMin":           BMS_socMin,
-                    # "SOC_CycleStarting":    SOC_CycleStarting,
                     "DeePC_Control_Indicator":            DeePC_Control_Indicator,
                     "baseline_PID_Control_indicator":     baseline_PID_Control_indicator,
                     "actual_elapsed_time":  actual_elapsed_time,
-                    "hankel_idx":           hankel_idx,
                     "vref_horizon":         ref_horizon_speed,
                     "u_init":               u_init,
                     "y_init":               y_init,
                     "q_weights":            q_weights,
                     "r_weights":            r_weights,
                     "t_deepc(ms)":          t_deepc,
-                    "DeePC_Cost" :          cost,
+                    # "BMS_socMin":           BMS_socMin,
+                    # "SOC_CycleStarting":    SOC_CycleStarting,
                 })
                 # if BMS_socMin <= SOC_Stop:
                 #     break
