@@ -308,6 +308,17 @@ if __name__ == "__main__":
         # if ck == "CYC_SC03" and "SMCTRange_65mph_Depletion" in all_cycles:
         #     final_cycle_keys.append("SMCTRange_65mph_Depletion")
 
+    # ------ prompt the user to log data or not ------
+    log_data_bool  = False
+    while True:
+        choice = input("Do you want to log the data to excel? (y/n): ").strip().lower()
+        if choice in ["y", "n"]:
+            break
+        else:
+            print("Invalid input. Please enter 'y' or 'n'.")
+    if choice == "y":
+        log_data_bool = True
+
     for idx, cycle_key in enumerate(final_cycle_keys):
         # ----------------Stop the test if the vehicle SOC is too low to prevent draining the vehicle---------------------
         # SOC management
@@ -580,7 +591,7 @@ if __name__ == "__main__":
                 set_duty_cycle(bus, channel=ch, percent=0.0)                              # Zero out all PWM channels before exiting
             print("[Main] pca board PWM signal cleaned up and set back to 0.")
                 # ── Save log_data to Excel ───────────────────────────────────
-            if log_data:
+            if log_data and log_data_bool:
                 df = pd.DataFrame(log_data)
                 df['cycle_name']   = cycle_key
                 datetime = datetime.now()
@@ -594,10 +605,10 @@ if __name__ == "__main__":
                 print(f"[Main] Saved log to '{excel_path}' as {excel_filename}")
         next_cycle = cycle_keys[idx+1] if idx+1 < len(cycle_keys) else None
         remaining_cycle = cycle_keys[idx+1:]
-        print(f"[Main] Finish Running {cycle_key} on {veh_modelName}, Next running cycle {next_cycle}, take a 5 second break...")
+        print(f"[Main] Finish Running {cycle_key} on {veh_modelName}, Next running cycle {next_cycle}, take a 2 second break...")
         print(f"Current SOC: {BMS_socMin}%, system will stop at SOC: {SOC_Stop}% ")
         print(f"[Main] Plan to run the following cycles: {remaining_cycle}")
-        time.sleep(5)
+        time.sleep(2)
 
     # Stop CAN thread and wait up to 1 s
     dyno_can_running = False
