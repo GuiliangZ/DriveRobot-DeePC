@@ -5,7 +5,7 @@ Hankel Matrix Analyzer and Optimizer for Speed-Scheduled DeePC Control
 Analyzes PRBS collected data to generate optimal Hankel matrices for different
 speed operating points, with tools for matrix quality assessment and optimization.
 
-Author: Generated for Drive Robot DeePC Project
+Author: Guiliang Zheng
 Date: 2025-07-21
 """
 
@@ -21,8 +21,8 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings('ignore')
 
-# Import DeePC utilities
-from utils_deepc import hankel_full
+# # Import DeePC utilities
+# from utils_deepc import hankel_full
 
 
 class HankelMatrixAnalyzer:

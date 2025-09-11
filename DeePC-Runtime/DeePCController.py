@@ -299,15 +299,6 @@ if __name__ == "__main__":
     cycle_keys = choose_cycle_key(all_cycles)           # Prompt the user to choose multiple drive cycles the user wish to test
     veh_modelName = choose_vehicleModelName()           # Prompt the user to choose the model of testing vehicle for logging purpose
 
-    # ---- for SMCTPlus 65mph depletion ----------------------------
-    final_cycle_keys = []
-    for ck in cycle_keys:
-        final_cycle_keys.append(ck)
-        if ck == "CYC_SMCTPlus_RANGE" and "SMCTRange_65mph_Depletion" in all_cycles:
-            final_cycle_keys.append("SMCTRange_65mph_Depletion")
-        # if ck == "CYC_SC03" and "SMCTRange_65mph_Depletion" in all_cycles:
-        #     final_cycle_keys.append("SMCTRange_65mph_Depletion")
-
     # ------ prompt the user to log data or not ------
     log_data_bool  = False
     while True:
@@ -319,7 +310,7 @@ if __name__ == "__main__":
     if choice == "y":
         log_data_bool = True
 
-    for idx, cycle_key in enumerate(final_cycle_keys):
+    for idx, cycle_key in enumerate(cycle_keys):
         # ----------------Stop the test if the vehicle SOC is too low to prevent draining the vehicle---------------------
         # SOC management
         if BMS_socMin is not None and BMS_socMin <= SOC_Stop:

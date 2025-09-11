@@ -5,7 +5,7 @@ PRBS Data Collection Controller for DeePC Hankel Matrix Generation
 Collects SISO data at different operating points using Pseudo-Random Binary Sequence (PRBS)
 to build comprehensive Hankel matrices for speed-scheduled DeePC control.
 
-Author: Generated for Drive Robot DeePC Project
+Author: Guiliang Zheng
 Date: 2025-07-21
 """
 
@@ -101,7 +101,7 @@ class AdditiveEnhancementController:
         
     def compute_control(self, error, ref_speed, v_meas, ref_time=None, ref_speed_array=None, elapsed_time=None):
         """
-        Compute total control = baseline PID (unchanged) + enhancement signals
+        Compute total control = baseline PID
         """
         # ═══ STEP 1: GET BASELINE PID (COMPLETELY UNCHANGED) ═══
         baseline_kp, baseline_ki, baseline_kd, baseline_kff = get_gains_for_speed(ref_speed)
@@ -216,10 +216,6 @@ class AdditiveEnhancementController:
             'baseline_kp': baseline_kp,
             'baseline_ki': baseline_ki,
             'baseline_kff': baseline_kff,
-            'kp_enhancement_mult': self.kp_enhancement_mult,
-            'ki_enhancement_mult': self.ki_enhancement_mult,
-            'performance_scaling': self.compute_performance_scaling() if self.enable_enhancements else 1.0,
-            'enhancement_enabled': self.enable_enhancements,
             'tracking_success': abs(error) < 0.5,
             'ref_speed': ref_speed,
             'baseline_integral_state': self.baseline_I_state,
@@ -481,8 +477,6 @@ class AdditiveEnhancementController:
         
         print("[Additive Enhancement] Controller reset for new cycle")
         print("  - Baseline PID state: Reset to initial")
-        print("  - Enhancement data: Cleared")
-        print("  - Learned patterns: Preserved")
 
 
 class PRBSDataCollector:
@@ -518,7 +512,7 @@ class PRBSDataCollector:
         self.veh_can_running = True
         
         # Hardware setup
-        self.CP2112_BUS = 3
+        self.CP2112_BUS = 15
         self.bus = None
         
         # Initialize the Enhanced PID Controller from EnhancedPID-Controller-IWR.py
@@ -615,7 +609,7 @@ class PRBSDataCollector:
     def setup_can_communication(self):
         """Setup CAN communication for speed/force reading and vehicle SOC monitoring."""
         def dyno_can_listener():
-            DYNO_DBC_PATH = '/home/guiliang/Desktop/DrivingRobot/KAVL_V3.dbc'
+            DYNO_DBC_PATH = '/home/rangedriverobot/DriveRobot-DeePC/KAVL_V3.dbc'
             DYNO_CAN_INTERFACE = 'can0'
             
             try:
@@ -644,7 +638,7 @@ class PRBSDataCollector:
                 print(f"[CAN] Dyno CAN setup failed: {e}")
         
         def veh_can_listener():
-            VEH_DBC_PATH = '/home/guiliang/Desktop/DrivingRobot/vehBus.dbc'
+            VEH_DBC_PATH = '/home/rangedriverobot/DriveRobot-DeePC/vehBus.dbc'
             VEH_CAN_INTERFACE = 'can1'
             
             try:

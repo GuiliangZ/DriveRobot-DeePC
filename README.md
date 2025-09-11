@@ -222,7 +222,7 @@ MANUAL_DEEPC_PARAMS = DeePCParameters(
 
 All data is saved to Excel files in `Log_DriveRobot/` with naming format:
 ```
-HHMM_MMDD_DR_log_<vehicle>_<cycle>_Start<SOC>%_<algorithm>_Ts<period>_Q<value>_R<value>_FixedHankel.xlsx
+HHMM_MMDD_DR_log_<vehicle>_<cycle>_Start<SOC>%_<algorithm>.xlsx
 ```
 
 Logged data includes:
@@ -258,24 +258,7 @@ Logged data includes:
 
 5. **DeePC Solver Failures**
    - Check constraint violations in logs
-   - System automatically falls back to enhanced PID
-   - Autotuner will adapt parameters to improve success rate
-
-## Advanced Usage
-
-### Disable Autotuning
-In `core/PIDDeePCControllerFixed.py`:
-```python
-self.enable_autotuning = False  # Line ~929
-```
-
-### Adjust Autotuning Parameters
-In `core/PIDDeePCControllerFixed.py`, modify the OnlineAutotuner class:
-```python
-self.update_interval = 200      # Update every 20 seconds
-self.exploration_rate = 0.10    # 10% exploration
-self.adaptation_rate = 0.03     # 3% change rate
-```
+   - System automatically falls back to PID
 
 ### Change Performance Weights
 In the `calculate_performance_score` method:
