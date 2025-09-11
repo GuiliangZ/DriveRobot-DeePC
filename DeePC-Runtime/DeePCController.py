@@ -373,7 +373,7 @@ if __name__ == "__main__":
         RSPD_TOL = 2.0
         RSPD_LOW = RSPD_TARGET - RSPD_TOL
         RSPD_HIGH = RSPD_TARGET + RSPD_TOL
-        RSPD_MIN_DUR = 180.0  # seconds - at least keep this long to trigger
+        RSPD_MIN_DUR = 3600.0 # seconds - at least keep this long to trigger
         V_DROP_MAX = 101.0     # interprets "100 +1" as <= 101 kph 
         steady_start = None    # when we first enter the 105±2 band
 
