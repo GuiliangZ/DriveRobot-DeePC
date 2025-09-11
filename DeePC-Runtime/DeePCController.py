@@ -299,16 +299,18 @@ if __name__ == "__main__":
     cycle_keys = choose_cycle_key(all_cycles)           # Prompt the user to choose multiple drive cycles the user wish to test
     veh_modelName = choose_vehicleModelName()           # Prompt the user to choose the model of testing vehicle for logging purpose
 
-    # ---- for SMCTPlus 65mph depletion ----------------------------
-    final_cycle_keys = []
-    for ck in cycle_keys:
-        final_cycle_keys.append(ck)
-        if ck == "CYC_SMCTPlus_RANGE" and "SMCTRange_65mph_Depletion" in all_cycles:
-            final_cycle_keys.append("SMCTRange_65mph_Depletion")
-        # if ck == "CYC_SC03" and "SMCTRange_65mph_Depletion" in all_cycles:
-        #     final_cycle_keys.append("SMCTRange_65mph_Depletion")
+    # ------ prompt the user to log data or not ------
+    log_data_bool  = False
+    while True:
+        choice = input("Do you want to log the data to excel? (y/n): ").strip().lower()
+        if choice in ["y", "n"]:
+            break
+        else:
+            print("Invalid input. Please enter 'y' or 'n'.")
+    if choice == "y":
+        log_data_bool = True
 
-    for idx, cycle_key in enumerate(final_cycle_keys):
+    for idx, cycle_key in enumerate(cycle_keys):
         # ----------------Stop the test if the vehicle SOC is too low to prevent draining the vehicle---------------------
         # SOC management
         if BMS_socMin is not None and BMS_socMin <= SOC_Stop:
@@ -362,7 +364,7 @@ if __name__ == "__main__":
         RSPD_TOL = 2.0
         RSPD_LOW = RSPD_TARGET - RSPD_TOL
         RSPD_HIGH = RSPD_TARGET + RSPD_TOL
-        RSPD_MIN_DUR = 180.0  # seconds - at least keep this long to trigger
+        RSPD_MIN_DUR = 3600.0 # seconds - at least keep this long to trigger
         V_DROP_MAX = 101.0     # interprets "100 +1" as <= 101 kph 
         steady_start = None    # when we first enter the 105±2 band
 
@@ -580,7 +582,7 @@ if __name__ == "__main__":
                 set_duty_cycle(bus, channel=ch, percent=0.0)                              # Zero out all PWM channels before exiting
             print("[Main] pca board PWM signal cleaned up and set back to 0.")
                 # ── Save log_data to Excel ───────────────────────────────────
-            if log_data:
+            if log_data and log_data_bool:
                 df = pd.DataFrame(log_data)
                 df['cycle_name']   = cycle_key
                 datetime = datetime.now()
@@ -594,10 +596,10 @@ if __name__ == "__main__":
                 print(f"[Main] Saved log to '{excel_path}' as {excel_filename}")
         next_cycle = cycle_keys[idx+1] if idx+1 < len(cycle_keys) else None
         remaining_cycle = cycle_keys[idx+1:]
-        print(f"[Main] Finish Running {cycle_key} on {veh_modelName}, Next running cycle {next_cycle}, take a 5 second break...")
+        print(f"[Main] Finish Running {cycle_key} on {veh_modelName}, Next running cycle {next_cycle}, take a 2 second break...")
         print(f"Current SOC: {BMS_socMin}%, system will stop at SOC: {SOC_Stop}% ")
         print(f"[Main] Plan to run the following cycles: {remaining_cycle}")
-        time.sleep(5)
+        time.sleep(2)
 
     # Stop CAN thread and wait up to 1 s
     dyno_can_running = False
